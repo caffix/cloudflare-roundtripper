@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	// UserAgent is the default user agent used by Amass during HTTP requests.
+	// UserAgent is the default user agent used by HTTP requests.
 	UserAgent = "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.181 Safari/537.36"
 )
 
@@ -147,11 +147,63 @@ func extractJS(body, domain string) (string, error) {
 	return js, nil
 }
 
+type ottoReturn struct {
+	Result float64
+	Err    error
+}
+
+var errHalt = errors.New("Stop")
+
 func evaluateJS(js string) (float64, error) {
-	vm := otto.New()
-	result, err := vm.Run(js)
-	if err != nil {
-		return 0, err
+	var err error
+	var result float64
+	interrupt := make(chan func())
+	ret := make(chan *ottoReturn)
+	t := time.NewTimer(5 * time.Second)
+	defer t.Stop()
+
+	go executeUnsafeJS(js, interrupt, ret)
+loop:
+	for {
+		select {
+		case <-t.C:
+			interrupt <- func() {
+				panic(errHalt)
+			}
+		case r := <-ret:
+			result = r.Result
+			err = r.Err
+			break loop
+		}
 	}
-	return result.ToFloat()
+	return result, err
+}
+
+func executeUnsafeJS(js string, interrupt chan func(), ret chan *ottoReturn) {
+	var num float64
+
+	vm := otto.New()
+	vm.Interrupt = interrupt
+
+	defer func() {
+		if caught := recover(); caught != nil {
+			if caught == errHalt {
+				ret <- &ottoReturn{
+					Result: num,
+					Err:    errors.New("The unsafe Javascript ran for too long"),
+				}
+				return
+			}
+			panic(caught)
+		}
+	}()
+
+	result, err := vm.Run(js)
+	if err == nil {
+		num, err = result.ToFloat()
+	}
+	ret <- &ottoReturn{
+		Result: num,
+		Err:    err,
+	}
 }
