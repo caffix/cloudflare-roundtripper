@@ -15,6 +15,8 @@ import(
 )
 
 func main() {
+    var err error
+
     // Setup your client however you need it. This is simply an example
     client := &http.Client{
         Timeout: 15 * time.Second,
@@ -27,7 +29,10 @@ func main() {
         },
     }
     // Set the client Transport to the RoundTripper that solves the Cloudflare anti-bot
-    client.Transport, _ = cfrt.New(client.Transport)
+    client.Transport, err = cfrt.New(client.Transport)
+    if err != nil {
+        return
+    }
     
     req, err := http.NewRequest("GET", "http://example.com/path", nil)
     if err != nil {
