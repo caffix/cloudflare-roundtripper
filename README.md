@@ -7,6 +7,7 @@ Working Go implementation inspired by Anorov/cloudflare-scrape written in python
 
 ```go
 import(
+    "time"
     "net"
     "net/http"
 
@@ -24,7 +25,6 @@ func main() {
 				DualStack: true,
 			}).DialContext,
 		},
-		Jar: jar,
     }
     // Set the client Transport to the RoundTripper that solves the Cloudflare anti-bot
 	client.Transport, _ = cfrt.New(client.Transport)
