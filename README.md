@@ -18,13 +18,13 @@ func main() {
     // Setup your client however you need it. This is simply an example
     client := &http.Client{
         Timeout: 15 * time.Second,
-		Transport: &http.Transport{
-			DialContext: (&net.Dialer{
-				Timeout:   15 * time.Second,
-				KeepAlive: 15 * time.Second,
-				DualStack: true,
-			}).DialContext,
-		},
+        Transport: &http.Transport{
+            DialContext: (&net.Dialer{
+                Timeout:   15 * time.Second,
+                KeepAlive: 15 * time.Second,
+                DualStack: true,
+            }).DialContext,
+        },
     }
     // Set the client Transport to the RoundTripper that solves the Cloudflare anti-bot
     client.Transport, _ = cfrt.New(client.Transport)
